@@ -257,8 +257,7 @@
         case 'mouseleave':
           element = event.toElement;
           break;
-        default:
-          return null;
+        default: return null;
       }
       return Element.extend(element);
     }
@@ -343,8 +342,18 @@
 
             var parent = event.relatedTarget;
             while (parent && parent !== element) {
+              // Firefox < 3.6 sometimes assigns a XULElement to relatedTarget
+              // which accessing parentNode property throws an Error
               try { parent = parent.parentNode; }
-              catch(e) { parent = element; }
+              catch(e) {
+                // If we encounter an XULElement we make sure
+                // to dispatch an event with a fixed relatedTarget property.
+                // Since this property is readonly we must create a new Object.
+                if (Object.prototype.toString.call(parent) == "[object XULElement]") {
+                  event = Object.extend(Object.extend({ }, event),{relatedTarget: element.parentNode});
+                }
+                break;
+              }
             }
 
             if (parent === element) return;
