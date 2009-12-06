@@ -158,6 +158,36 @@
   }
   
   /**
+   *  Event.relatedElement(@event) -> Element
+   *
+   *  Returns the event relatedTarget DOM element associated with mouse(over|out|enter|leave) events.
+   *  Keep in mind that trying to retreive a related element with any another type of event will return _null_.
+  **/
+  function relatedElement(event) {
+    var element;
+
+    if (Prototype.Browser.IE) {
+      switch (event.type) {
+        case 'mouseover':
+        case 'mouseenter':
+          element = event.fromElement;
+          break;
+        case 'mouseout':
+        case 'mouseleave':
+          element = event.toElement;
+          break;
+        default: return null;
+      }
+    // Firefox < 3.6 sometimes assigns a XULElement to relatedTarget
+    // when mouse(over|out)ing an observed element within a parent with scrollbars.
+    } else if (Object.prototype.toString.call(event.relatedTarget) == "[object XULElement]") {
+      element = Event.element(event).parentNode;
+    } else element = event.relatedTarget;
+
+    return element ? Element.extend(element) : null;
+  }
+
+  /**
    *  Event.pointer(@event) -> Object
    *
    *  Returns the absolute position of the pointer for a mouse event.
@@ -234,6 +264,7 @@
 
     element: element,
     findElement: findElement,
+    relatedElement: relatedElement,
 
     pointer: pointer,
     pointerX: pointerX,
@@ -250,16 +281,6 @@
   });
 
   if (Prototype.Browser.IE) {
-    function _relatedTarget(event) {
-      var element;
-      switch (event.type) {
-        case 'mouseover': element = event.fromElement; break;
-        case 'mouseout':  element = event.toElement;   break;
-        default: return null;
-      }
-      return Element.extend(element);
-    }
-
     Object.extend(methods, {
       stopPropagation: function() { this.cancelBubble = true },
       preventDefault:  function() { this.returnValue = false },
@@ -278,7 +299,6 @@
       // `target` property in case IE doesn't give us through `srcElement`.
       Object.extend(event, {
         target: event.srcElement || element,
-        relatedTarget: _relatedTarget(event),
         pageX:  pointer.x,
         pageY:  pointer.y
       });
@@ -340,8 +360,11 @@
 
             var parent = event.relatedTarget;
             while (parent && parent !== element) {
+              // Firefox < 3.6 sometimes assigns a XULElement to relatedTarget
+              // which accessing parentNode property throws an Error.
+              // See Event.relatedElement.
               try { parent = parent.parentNode; }
-              catch(e) { parent = element; }
+              catch(e) { break; }
             }
 
             if (parent === element) return;

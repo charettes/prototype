@@ -235,7 +235,7 @@
         $('mouseenter').stopObserving();
       });
       $('mouseenter').observe('mouseleave', function(event) {
-        if ($(event.relatedTarget).descendantOf($('mouseenter'))) {
+        if (event.relatedElement().descendantOf($('mouseenter'))) {
           $('mouseenter').failed();
         } else $('mouseenter').passed();
         
@@ -244,6 +244,47 @@
     });
   </script>
   
+  <p id="mouseout_scrollbars">mouse(out|enter) with scrollbars test</p>
+  
+  <script type="text/javascript">
+    $('mouseout_scrollbars').observe('click', function() {
+      $('mouseout_scrollbars').insert("<br />carefully mouse out of the box by overing the scrollbars");
+
+      $('mouseout_scrollbars').setStyle({ padding: '0px', margin: '0px' });
+      $('mouseout_scrollbars').wrap('div', { id: 'mouseout_scrollbars_container'})
+                              .setStyle({ width: $('mouseout_scrollbars').getWidth() + 'px', overflow: 'scroll'});
+      
+      var out = false;
+
+      $('mouseout_scrollbars').observe('mouseleave', function(event) {
+        out = true;
+
+        try {
+          var nodeType = event.relatedElement().nodeType;
+          $('mouseout_scrollbars').passed();
+        }
+        catch (e) { $('mouseout_scrollbars').failed(); }
+
+        $('mouseout_scrollbars_container').stopObserving().replace($('mouseout_scrollbars'));
+        $('mouseout_scrollbars').stopObserving().setStyle({ padding: '', margin: '' });
+      });
+      
+      // We defer in order to avoid triggering mouseout on 'mouseout_scrollbars' wrapping.
+      (function(){$('mouseout_scrollbars_container').observe('mouseout', function(event) {
+        // We defer because mouseout happens before mouseleave on IE        
+        (function() {
+          if (!out) {
+            $('mouseout_scrollbars').failed();
+
+            $('mouseout_scrollbars_container').stopObserving().replace($('mouseout_scrollbars'));
+            $('mouseout_scrollbars').stopObserving().setStyle({ padding: '', margin: '' });
+          }
+        }).defer();     
+      })}).defer();
+    });
+  </script>
+
+
   <p id="addunload">Add unload events</p>
   
   <script type="text/javascript">
